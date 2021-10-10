@@ -12,17 +12,15 @@ namespace Assets.Serialization
     // The partial keyword just means we're adding these three methods to the code in Serializer.cs
     public partial class Serializer
     {
+        private Dictionary<object, int> table = new Dictionary<object, int>();
+        private int sn = 0;
+
         /// <summary>
         /// Print out the serialization data for the specified object.
         /// </summary>
         /// <param name="o">Object to serialize</param>
-        static int id = 0;
-        static int flag = 0;
-        bool firstItem = false;
-        static Dictionary<object, int> ObjectDictionary = new Dictionary<object, int>();
         private void WriteObject(object o)
         {
-            //UnityEngine.Debug.Log(o);
             switch (o)
             {
                 case null:
@@ -41,11 +39,21 @@ namespace Assets.Serialization
                 // but that doesn't really matter for an assignment like this, so I'm not
                 // going to confuse the reader by complicating the code to escape the strings.
                 case string s:
-                    Write($"\"{s}\"");
+                    Write('"');
+                    Write(s);
+                    Write('"');
                     break;
 
                 case bool b:
-                    Write(b);
+                    if (b)
+                    {
+                        Write("True");
+                    }
+                    else
+                    {
+                        Write("False");
+                    }
+
                     break;
 
                 case IList list:
@@ -69,57 +77,64 @@ namespace Assets.Serialization
         /// <param name="o">Object to serialize</param>
         private void WriteComplexObject(object o)
         {
-            Write("#");
-            if (!ObjectDictionary.ContainsKey(o))
+            // check if it is already serialized with a sn(serialize number)
+            if (table.ContainsKey(o))
             {
-                Write(id);
-                WriteBracketedExpression(
-                    "{ ",
-                    () =>
-                    {
-                        IEnumerable ieable = Utilities.SerializedFields(o);
-                        IEnumerator ie = ieable.GetEnumerator();
-                        Nullable<KeyValuePair<string, object>> var;
-                        flag++;
-                        Write("type: ");
-                        Write("\"");
-                        Write(o.GetType().Name);
-                        Write("\"");
-                        ObjectDictionary.Add(o, id);
-                        id++;
-                        while (ie.MoveNext())
-                        {
-                            var = ie.Current as Nullable<KeyValuePair<string, object>>;
-                            WriteField(var.Value.Key, var.Value.Value, firstItem);
-                        }
-                    },
-                    " }");
-                flag--;
-                if (flag<=0) 
-                {
-                    id = 0;
-                    flag = 0;
-                    ObjectDictionary.Clear();
-                }
+                Write('#');
+                Write(table[o]);
             }
             else
             {
-                Write(ObjectDictionary[o]);
-                //return;
+                //add object to the table with sn
+                table.Add(o, sn);
+                sn++;
+                //write #sn{
+                Write('#');
+                Write(table[o]);
+                Write('{');
+                indentLevel++;
+                NewLine();
+
+                //write type:typename
+                Write("type: ");
+                WriteObject(o.GetType().Name);
+                Write(',');
+                NewLine();
+
+                //write the fieldname: vallue
+                IEnumerable<KeyValuePair<string, object>> fields = Utilities.SerializedFields(o);
+                bool firstOne = true;
+                foreach (KeyValuePair<string, object> f in fields)
+                {
+                    if (firstOne)
+                    {
+                        WriteField(f.Key, f.Value, firstOne);
+                        firstOne = false;
+                    }
+                    else
+                    {
+                        WriteField(f.Key, f.Value, firstOne);
+                    }
+                }
+
+                //write }
+                indentLevel--;
+                NewLine();
+                Write('}');
             }
         }
     }
-    
+
     // The partial keyword just means we're adding these three methods to the code in Deserializer.cs
     public partial class Deserializer
     {
+        private Dictionary<int, object> table = new Dictionary<int, object>();
+
         /// <summary>
         /// Read whatever data object is next in the stream
         /// </summary>
         /// <param name="enclosingId">The object id of whatever object this is a part of, if any</param>
         /// <returns>The deserialized object</returns>
-        static Dictionary<int, object> DeObjectDictionary= new Dictionary<int, object>();
-        static int iterator = 0;
         public object ReadObject(int enclosingId)
         {
             SkipWhitespace();
@@ -166,8 +181,10 @@ namespace Assets.Serialization
             SkipWhitespace();
 
             // You've got the id # of the object.  Are we done now?
-            //throw new NotImplementedException("Fill me in");
-            if (DeObjectDictionary.ContainsKey(id)) return DeObjectDictionary[id];
+            if (table.ContainsKey(id))
+            {
+                return table[id];
+            }
 
             // Assuming we aren't done, let's check to make sure there's a { next
             SkipWhitespace();
@@ -176,7 +193,7 @@ namespace Assets.Serialization
             var c = GetChar();
             if (c != '{')
                 throw new Exception($"Expected '{'{'}' after #{id} but instead got {c}");
-            iterator++;
+
             // There's a {.
             // Let's hope there's a type: typename line.
             var (hopefullyType, typeName) = ReadField(id);
@@ -189,18 +206,15 @@ namespace Assets.Serialization
                     $"Expected a type name (a string) in 'type: ...' expression for object id {id}, but instead got {typeName}");
 
             // Great!  Now what?
-            //throw new NotImplementedException("Fill me in");
-            object NewObject = Utilities.MakeInstance(type);
-            DeObjectDictionary.Add(id, NewObject);
+            object o = Utilities.MakeInstance(type);
+            table.Add(id, o);
 
             // Read the fields until we run out of them
             while (!End && PeekChar != '}')
             {
                 var (field, value) = ReadField(id);
                 // We've got a field and a value.  Now what?
-                //throw new NotImplementedException("Fill me in");
-
-                Utilities.SetFieldByName(NewObject, field, value);
+                Utilities.SetFieldByName(o, field, value);
             }
 
             if (End)
@@ -209,14 +223,7 @@ namespace Assets.Serialization
             GetChar();  // Swallow close bracket
 
             // We're done.  Now what?
-            //throw new NotImplementedException("Fill me in");
-            iterator--;
-            if (iterator <= 0)
-            {
-                iterator = 0;
-                DeObjectDictionary.Clear();
-            }
-            return NewObject;
+            return o;
         }
     }
 }
