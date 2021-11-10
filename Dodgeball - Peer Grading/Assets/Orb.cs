@@ -12,10 +12,7 @@ public class Orb : MonoBehaviour
     // ReSharper disable once UnusedMember.Local
     void OnBecameInvisible()
     {
-        // TODO
-        //if(transform.position.x < SpawnUtilities.Min.x||transform.position.x > SpawnUtilities.Max.x || 
-            //transform.position.y < SpawnUtilities.Min.y || transform.position.y > SpawnUtilities.Max.y)
-        Destroy(gameObject);
+        Destroy(this.gameObject);
     }
 
     /// <summary>
@@ -25,7 +22,9 @@ public class Orb : MonoBehaviour
     // ReSharper disable once UnusedMember.Local
     void OnCollisionEnter2D(Collision2D collision)
     {
-        // TODO
-        if (collision.collider.gameObject.name != gameObject.name) Destroy(gameObject);
+        if (!collision.collider.gameObject.GetComponent<Orb>())
+        {
+            Destroy(this.gameObject);
+        }
     }
 }

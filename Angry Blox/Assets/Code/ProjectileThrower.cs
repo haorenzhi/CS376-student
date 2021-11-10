@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
@@ -71,7 +71,13 @@ public class ProjectileThrower : MonoBehaviour {
     /// <returns></returns>
     bool WaitingForPhysicsToSettle()
     {
-        return true;  // Replace this
+        var objects = Object.FindObjectsOfType<Rigidbody2D>();
+        foreach(var obj in objects)
+        {
+            if (IsActive(obj))
+                return true;
+        }
+        return false;  // Replace this
     }
 
     /// <summary>
@@ -86,6 +92,10 @@ public class ProjectileThrower : MonoBehaviour {
     internal void Update()
     {
         FireControl();
+        if ((firingState == FiringState.Firing && !WaitingForPhysicsToSettle()) || Input.GetKeyDown(KeyCode.Escape))
+        {
+            ResetForFiring();
+        }
     }
 
     /// <summary>

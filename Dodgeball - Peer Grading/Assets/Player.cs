@@ -26,9 +26,19 @@ public class Player : MonoBehaviour
     /// </summary>
     public float OrbVelocity = 10;
 
-    private Vector2 direction;
+    /// <summary>
+    /// Field to store the RigidBody2D component of the player game object
+    /// </summary>
+    public Rigidbody2D Body;
 
-    private Rigidbody2D rigidBody;
+    /// <summary>
+    /// Initializes the RigidBody variable
+    /// </summary>
+    void Start()
+    {
+        Body = this.GetComponent<Rigidbody2D>();
+    }
+
     /// <summary>
     /// Fire if the player is pushing the button for the Fire axis
     /// Unlike the Enemies, the player has no cooldown, so they shoot a whole blob of orbs
@@ -37,18 +47,14 @@ public class Player : MonoBehaviour
     /// It should move in the same direction (transform.right), but at speed OrbVelocity.
     /// </summary>
     // ReSharper disable once UnusedMember.Local
-    void Start()
-    {
-        rigidBody = GetComponent<Rigidbody2D>();
-    }
-
     void Update()
     {
-        // TODO
-        if (Input.GetAxis("Fire")!=0f){
-            var orb = Instantiate(OrbPrefab, transform.position+transform.right, Quaternion.identity);
-            var orbrigidbody = orb.GetComponent<Rigidbody2D>();
-            orbrigidbody.velocity = OrbVelocity * transform.right;
+        // instantiate an orb when firing
+        if (Input.GetAxis("Fire") == 1)
+        {
+            GameObject NewOrb = Instantiate(OrbPrefab, this.transform.right + this.transform.position, Quaternion.identity);
+            // set orb velocity
+            NewOrb.GetComponent<Rigidbody2D>().velocity = OrbVelocity * this.transform.right;
         }
     }
 
@@ -61,10 +67,14 @@ public class Player : MonoBehaviour
     // ReSharper disable once UnusedMember.Local
     void FixedUpdate()
     {
-        // TODO
-        direction= new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-        rigidBody.AddForce(direction * EnginePower);
-        rigidBody.angularVelocity = (Input.GetAxis("Rotate")* RotateSpeed);
+        // get direction of controller joystick
+        Vector2 direction = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        // scale direction by EnginePower and apply it to the player to allow movement
+        direction = direction * EnginePower;
+        Body.AddForce(direction);
+        // enable player aiming by setting angular velocity
+        Body.angularVelocity = Input.GetAxis("Rotate") * RotateSpeed;
+
     }
 
     /// <summary>

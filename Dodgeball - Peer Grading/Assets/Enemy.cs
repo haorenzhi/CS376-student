@@ -32,6 +32,12 @@ public class Enemy : MonoBehaviour
     public float CoolDownTime = 1;
 
     /// <summary>
+    /// Time when the enemy can shoot next
+    ///  -> needs to be initialized as Time.time in start() to avoid multiple shots when spawning at a time past 0
+    /// </summary>
+    public float NextShot;
+
+    /// <summary>
     /// Prefab for the orb it fires
     /// </summary>
     public GameObject OrbPrefab;
@@ -57,17 +63,16 @@ public class Enemy : MonoBehaviour
     /// Unit vector in the direction of the player, relative to us
     /// </summary>
     private Vector2 HeadingToPlayer => OffsetToPlayer.normalized;
-    private float NextFireTime = 0;
 
     /// <summary>
-    /// Initialize player and rigidBody fields
+    /// Initialize player and rigidBody fields and set NextShot to current time to avoid multiple shot bug
     /// </summary>
     // ReSharper disable once UnusedMember.Local
     void Start()
     {
         player = FindObjectOfType<Player>().transform;
         rigidBody = GetComponent<Rigidbody2D>();
-        CoolDownTime = 1;
+        NextShot = Time.time;
     }
 
     /// <summary>
@@ -76,13 +81,11 @@ public class Enemy : MonoBehaviour
     // ReSharper disable once UnusedMember.Local
     void Update()
     {
-        // TODO
-
-        if (Time.time >= NextFireTime)
+        if (Time.time > NextShot)
         {
-            NextFireTime += CoolDownTime;
-            Fire();
-        } 
+            NextShot += CoolDownTime;
+            this.Fire();
+        }
     }
 
     /// <summary>
@@ -91,11 +94,12 @@ public class Enemy : MonoBehaviour
     /// </summary>
     private void Fire()
     {
-        // TODO
-        var orb = Instantiate(OrbPrefab, (Vector2)transform.position + HeadingToPlayer, Quaternion.identity);
-        var orbrigidbody = orb.GetComponent<Rigidbody2D>();
-        orbrigidbody.velocity = OrbVelocity * HeadingToPlayer;
-        orbrigidbody.mass = OrbMass;
+        GameObject NewOrb = Instantiate(OrbPrefab,
+            new Vector2(this.transform.position.x, this.transform.position.y) + HeadingToPlayer, Quaternion.identity);
+        // set orb velocity
+        NewOrb.GetComponent<Rigidbody2D>().velocity = OrbVelocity * HeadingToPlayer;
+        // set orb mass
+        NewOrb.GetComponent<Rigidbody2D>().mass = OrbMass;
     }
 
     /// <summary>
