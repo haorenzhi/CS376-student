@@ -87,6 +87,14 @@ public class PlayerControl : MonoBehaviour {
         playerRB.velocity = transform.forward*3;
     }
 
+    private void FixedUpdate()
+    {
+        roll = Input.GetAxis("Horizontal") * RollRange;
+        pitch = Input.GetAxis("Vertical")* PitchRange;
+        yaw += roll * RotationalSpeed;
+        playerRB.MoveRotation(Quaternion.Euler(pitch, yaw, roll));
+        thrust = Input.GetAxis("Thrust") > 0 ? Input.GetAxis("Thrust") * MaximumThrust : 0;
+    }
     /// <summary>
     /// Show game-over display
     /// </summary>
